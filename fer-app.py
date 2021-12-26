@@ -4,6 +4,11 @@ from PIL import Image
 import numpy as np
 from keras.preprocessing.image import img_to_array
 from keras.models import load_model
+import queue
+from streamlit_webrtc import VideoTransformerBase, webrtc_streamer
+from streamlit_webrtc.config import RTCConfiguration
+from streamlit_webrtc.webrtc import WebRtcMode
+
 
 face_cascade = cv2.CascadeClassifier('./haarcascade_frontalface_default.xml')
 
@@ -11,6 +16,10 @@ classifier = load_model('./model.h5')
 
 emotion_labels = ["Angry", "Disgust", "Fear",
                   "Happy", "Sad", "Surprise", "Neutral"]
+
+RTC_CONFIGURATION = RTCConfiguration(
+    {"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]}
+)
 
 FRAME_WINDOW = st.image([])
 
@@ -52,6 +61,26 @@ def make_label(rect, face, img):
     return img
     pass
 
+def web_cam_regco():
+    class VideoTransformer(VideoTransformerBase):
+        def transform(self, frame):
+            image = frame.to_ndarray(format="bgr24")
+
+            rect, face, img = detect_faces(image)
+            img_w_label = make_label(rect, face, img)
+            #img_w_label = cv2.cvtColor(img_w_label, cv2.COLOR_RGB2BGR)
+            return img_w_label
+
+
+    webrtc_ctx = webrtc_streamer(
+        key="emotion-recognite",
+        mode=WebRtcMode.SENDRECV,
+        rtc_configuration=RTC_CONFIGURATION,
+        video_processor_factory=VideoTransformer,
+        media_stream_constraints={"video": True, "audio": False},
+        async_processing=True,
+    )
+
 
 def main():
     html_temp = """
@@ -62,7 +91,6 @@ def main():
     </body>
     """
     st.markdown(html_temp, unsafe_allow_html=True)
-    webcam = st.checkbox("Using webcam")
     image_file = st.file_uploader("Upload Image", type=['jpg', 'png', 'jpeg'])
     if image_file is not None:
         our_image = Image.open(image_file)
@@ -76,19 +104,14 @@ def main():
 
         st.image(img)
 
+
+    webcam = st.checkbox('Using webcam')
     if webcam:
-        cam = cv2.VideoCapture(0)
-        while webcam:
-            ret, frame = cam.read()
+        web_cam_regco()
 
-            rect, face, img = detect_faces(frame)
-            img_w_label = make_label(rect, face, img)
-            img_w_label = cv2.cvtColor(img_w_label, cv2.COLOR_BGR2RGB)
-            FRAME_WINDOW.image(img_w_label)
+    
 
-        cam.release()
-    else:
-        st.write('Webcam stopped')
+
 
 
 if __name__ == '__main__':
