@@ -1,4 +1,4 @@
-import streamlit as stl
+import streamlit as st
 import cv2
 from PIL import Image
 import numpy as np
@@ -12,7 +12,7 @@ classifier = load_model('./model.h5')
 emotion_labels = ["Angry", "Disgust", "Fear",
                   "Happy", "Sad", "Surprise", "Neutral"]
 
-FRAME_WINDOW = stl.image([])
+FRAME_WINDOW = st.image([])
 
 
 def detect_faces(input_img):
@@ -61,20 +61,20 @@ def main():
     </div>
     </body>
     """
-    stl.markdown(html_temp, unsafe_allow_html=True)
-    webcam = stl.checkbox("Using webcam")
-    image_file = stl.file_uploader("Upload Image", type=['jpg', 'png', 'jpeg'])
+    st.markdown(html_temp, unsafe_allow_html=True)
+    webcam = st.checkbox("Using webcam")
+    image_file = st.file_uploader("Upload Image", type=['jpg', 'png', 'jpeg'])
     if image_file is not None:
         our_image = Image.open(image_file)
-        stl.text("Original Image")
-        stl.image(our_image)
+        st.text("Original Image")
+        st.image(our_image)
 
-    if stl.button("Recognise"):
+    if st.button("Recognise"):
         rect, face, img = detect_faces(our_image)
 
         img = make_label(rect, face, img)
 
-        stl.image(img)
+        st.image(img)
 
     if webcam:
         cam = cv2.VideoCapture(0)
@@ -88,7 +88,7 @@ def main():
 
         cam.release()
     else:
-        stl.write('Webcam stopped')
+        st.write('Webcam stopped')
 
 
 if __name__ == '__main__':
